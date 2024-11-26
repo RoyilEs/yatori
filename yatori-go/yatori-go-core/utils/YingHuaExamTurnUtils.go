@@ -121,8 +121,9 @@ func TurnExamTopic(examHtml string) ExamTopics {
 			}
 
 			// Regular expression to extract fill-in-the-blank fields
-			fillPattern := `<input ((?<!answer).)+answer_(\d)+((?<!>).)+>`
-			fillRegexp := regexp.MustCompile(fillPattern)
+			fmt.Println(topicHtml)
+			fmt.Println("若打印出此数据请不要马上关闭，立即复制给作者。因为可能是傻逼英华引起的BUG，需要用户提供以上内容")
+			fillRegexp := regexp.MustCompile(`<input ((?<!answer).)+answer_(\d)+((?<!>).)+>`)
 			fillMatches := fillRegexp.FindAllStringSubmatch(topicHtml, -1)
 			for _, fillMatch := range fillMatches {
 				answerId := fillMatch[2]
