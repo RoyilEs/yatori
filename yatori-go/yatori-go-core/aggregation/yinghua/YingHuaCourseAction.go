@@ -316,7 +316,7 @@ func StartExamAction(
 		return errors.New(gojsonq.New().JSONString(startExam).Find("msg").(string))
 	}
 	//开始答题
-	api, err := yinghuaApi.GetExamTopicApi(*userCache, exam.NodeId, exam.ExamId)
+	api, err := yinghuaApi.GetExamTopicApi(*userCache, exam.NodeId, exam.ExamId, 8, nil)
 	if int(gojsonq.New().JSONString(startExam).Find("_code").(float64)) == 9 {
 		return errors.New(gojsonq.New().JSONString(startExam).Find("msg").(string))
 	}
@@ -337,19 +337,19 @@ func StartExamAction(
 			aiAnswer = randomAnswer(v)
 		}
 		//fmt.Println(aiAnswer)
-		subWorkApi, err := yinghuaApi.SubmitExamApi(*userCache, exam.ExamId, k, aiAnswer, "0")
+		subWorkApi, err := yinghuaApi.SubmitExamApi(*userCache, exam.ExamId, k, aiAnswer, "0", 8, nil)
 		if err != nil {
 			log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, "Ai异常，返回信息：", err.Error())
 		}
 		//如果提交答案服务器端返回信息异常
 		if gojsonq.New().JSONString(subWorkApi).Find("msg") != "答题保存成功" {
-			log.Print(log.INFO, log.BoldRed, `[`, userCache.Account, `] `, log.BoldRed, "提交答案异常，返回信息：", subWorkApi)
+			log.Print(log.INFO, log.BoldRed, `[`, userCache.Account, `] `, log.BoldRed, "提交答案异常，返回信息：", subWorkApi, "题目内容：", v, "AI回答信息：", aiAnswer)
 		}
 		lastAnswer = aiAnswer
 		lastProblem = k
 	}
 	//结束考试
-	subWorkApi, err := yinghuaApi.SubmitExamApi(*userCache, exam.ExamId, lastProblem, lastAnswer, "1")
+	subWorkApi, err := yinghuaApi.SubmitExamApi(*userCache, exam.ExamId, lastProblem, lastAnswer, "1", 8, nil)
 	//如果结束做题服务器端返回信息异常
 	if gojsonq.New().JSONString(subWorkApi).Find("msg") != "提交试卷成功" {
 		log.Print(log.INFO, log.BoldRed, `[`, userCache.Account, `] `, log.BoldRed, "提交试卷异常，返回信息：", subWorkApi)
@@ -359,7 +359,7 @@ func StartExamAction(
 
 // ExamFinallyScoreAction 获取最终作业分数
 func ExamFinallyScoreAction(userCache *yinghuaApi.YingHuaUserCache, work YingHuaExam) (string, error) {
-	detail, err := yinghuaApi.ExamFinallyDetailApi(*userCache, work.CourseId, work.NodeId, work.ExamId)
+	detail, err := yinghuaApi.ExamFinallyDetailApi(*userCache, work.CourseId, work.NodeId, work.ExamId, 8, nil)
 	if err != nil {
 		log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, err.Error())
 	}
@@ -376,7 +376,7 @@ func ExamFinallyScoreAction(userCache *yinghuaApi.YingHuaUserCache, work YingHua
 // WorkDetailAction 获取作业节点对应信息
 func WorkDetailAction(userCache *yinghuaApi.YingHuaUserCache, nodeId string) ([]YingHuaWork, error) {
 	var workList []YingHuaWork
-	jsonStr := yinghuaApi.WorkDetailApi(*userCache, nodeId)
+	jsonStr, _ := yinghuaApi.WorkDetailApi(*userCache, nodeId, 8, nil)
 	//超时重登检测
 	LoginTimeoutAfreshAction(userCache, jsonStr)
 	jsonData := gojsonq.New().JSONString(jsonStr).Find("result.list")
@@ -413,7 +413,7 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 	url, model, apiKey string,
 	aiType ctype.AiType) error {
 	//开始考试
-	startWork, err := yinghuaApi.StartWork(*userCache, work.CourseId, work.NodeId, work.WorkId)
+	startWork, err := yinghuaApi.StartWork(*userCache, work.CourseId, work.NodeId, work.WorkId, 8, nil)
 	if err != nil {
 		log.Print(log.INFO, err.Error())
 		return errors.New(err.Error())
@@ -423,7 +423,7 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 		return errors.New(gojsonq.New().JSONString(startWork).Find("msg").(string))
 	}
 	//开始答题
-	api, err := yinghuaApi.GetWorkApi(*userCache, work.NodeId, work.WorkId)
+	api, err := yinghuaApi.GetWorkApi(*userCache, work.NodeId, work.WorkId, 8, nil)
 	if int(gojsonq.New().JSONString(startWork).Find("_code").(float64)) == 9 {
 		return errors.New(gojsonq.New().JSONString(startWork).Find("msg").(string))
 	}
@@ -442,7 +442,7 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 			os.Exit(0)
 		}
 		//fmt.Println(aiAnswer)
-		subWorkApi, err := yinghuaApi.SubmitWorkApi(*userCache, work.WorkId, k, aiAnswer, "0")
+		subWorkApi, err := yinghuaApi.SubmitWorkApi(*userCache, work.WorkId, k, aiAnswer, "0", 10, nil)
 		if err != nil {
 			log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, "Ai异常，返回信息：", err.Error())
 		}
@@ -454,7 +454,7 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 		lastProblem = k
 	}
 	//结束考试
-	subWorkApi, err := yinghuaApi.SubmitWorkApi(*userCache, work.WorkId, lastProblem, lastAnswer, "1")
+	subWorkApi, err := yinghuaApi.SubmitWorkApi(*userCache, work.WorkId, lastProblem, lastAnswer, "1", 10, nil)
 	//如果结束做题服务器端返回信息异常
 	if gojsonq.New().JSONString(subWorkApi).Find("msg") != "提交作业成功" {
 		log.Print(log.INFO, log.BoldRed, `[`, userCache.Account, `] `, log.BoldRed, "提交试卷异常，返回信息：", subWorkApi)
@@ -465,7 +465,7 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 
 // WorkedFinallyScoreAction 获取最终作业分数
 func WorkedFinallyScoreAction(userCache *yinghuaApi.YingHuaUserCache, work YingHuaWork) (string, error) {
-	detail, err := yinghuaApi.WorkedFinallyDetailApi(*userCache, work.CourseId, work.NodeId, work.WorkId)
+	detail, err := yinghuaApi.WorkedFinallyDetailApi(*userCache, work.CourseId, work.NodeId, work.WorkId, 8, nil)
 	if err != nil {
 		log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, err.Error())
 	}

@@ -47,14 +47,14 @@ func TurnExamTopic(examHtml string) ExamTopics {
 		topicMap[index] = answerId
 	}
 
-	// Regular expression to extract the form containing the exam questions
+	// 匹配所有考试题目
 	formPattern := `<form method="post" action="/api/[^/]*\/submit">([\w\W]*?)</form>`
 	formRegexp := regexp.MustCompile(formPattern)
 
 	// Extract the form contents
 	formMatches := formRegexp.FindAllStringSubmatch(examHtml, -1)
 	for _, formMatch := range formMatches {
-		topicHtml := formMatch[1]
+		topicHtml := formMatch[1] //截取题目对应单个题目部分html
 
 		// Extracting topic number, type, and source
 		topicNumPattern := `<span class="num">[\D]*?([\d]+)`
@@ -109,10 +109,7 @@ func TurnExamTopic(examHtml string) ExamTopics {
 			content = strings.ReplaceAll(content, "<p>", "")
 			content = strings.ReplaceAll(content, "</p>", "\n")
 			content = strings.ReplaceAll(content, "&nbsp;", "")
-		}
-
-		// Handle Fill-in-the-blank questions
-		if tag == "填空" {
+		} else if tag == "填空" {
 			contentPattern := `<div[ \f\n\r\t\v]*class="content"[ \f\n\r\t\v]*style="[^\"]*">([\s\S]*?)</div>`
 			contentRegexp := regexp.MustCompile(contentPattern)
 			contentMatcher := contentRegexp.FindStringSubmatch(topicHtml)
@@ -121,12 +118,13 @@ func TurnExamTopic(examHtml string) ExamTopics {
 			}
 
 			// Regular expression to extract fill-in-the-blank fields
-			fmt.Println(topicHtml)
-			fmt.Println("若打印出此数据请不要马上关闭，立即复制给作者。因为可能是傻逼英华引起的BUG，需要用户提供以上内容")
-			fillRegexp := regexp.MustCompile(`<input ((?<!answer).)+answer_(\d)+((?<!>).)+>`)
+			//fmt.Println(topicHtml)
+			//fmt.Println("若打印出此数据请不要马上关闭，立即复制给作者。因为可能是傻逼英华引起的BUG，需要用户提供以上内容")
+			//fillRegexp := regexp.MustCompile(`<input ((?<!answer).)+answer_(\d)+((?<!>).)+>`)
+			fillRegexp := regexp.MustCompile(`<input class="[^"]*" autocomplete="[^"]*" autocomplete="[^"]*" type="[^"]*" style="[^"]*" name="answer_([^"]*)" value="[^"]*"/>`)
 			fillMatches := fillRegexp.FindAllStringSubmatch(topicHtml, -1)
 			for _, fillMatch := range fillMatches {
-				answerId := fillMatch[2]
+				answerId := fillMatch[1]
 				selects = append(selects, TopicSelect{
 					Value: answerId,
 					Num:   answerId,
@@ -135,11 +133,11 @@ func TurnExamTopic(examHtml string) ExamTopics {
 			}
 
 			// Replace fill-in-the-blank code
-			codePattern := `<code>((?<!answer).)+answer_(\d)+((?<!</code>).)+</code>`
-			codeRegexp := regexp.MustCompile(codePattern)
+			//codePattern := "<code>((?<!answer).)+answer_(\\d)+((?<!</code>).)+</code>"
+			codeRegexp := regexp.MustCompile(`<code> class="[^"]*" autocomplete="[^"]*" autocomplete="[^"]*" type="[^"]*" style="[^"]*" name="answer_([^"]*)" value="[^"]*"[^<]*</code>`)
 			codeMatches := codeRegexp.FindAllStringSubmatch(content, -1)
 			for _, codeMatch := range codeMatches {
-				answerId := codeMatch[2]
+				answerId := codeMatch[1]
 				content = strings.ReplaceAll(content, codeMatch[0], fmt.Sprintf("（answer_%s）", answerId))
 			}
 
@@ -147,6 +145,15 @@ func TurnExamTopic(examHtml string) ExamTopics {
 			content = strings.ReplaceAll(content, "<p>", "")
 			content = strings.ReplaceAll(content, "</p>", "\n")
 			content = strings.ReplaceAll(content, "&nbsp;", "")
+		} else if tag == "简答" {
+			contentPattern := `<div[ \f\n\r\t\v]*class="content"[ \f\n\r\t\v]*style="[^\"]*">([\s\S]*?)</div>`
+			contentRegexp := regexp.MustCompile(contentPattern)
+			contentMatcher := contentRegexp.FindStringSubmatch(topicHtml)
+			if len(contentMatcher) > 0 {
+				content = contentMatcher[1]
+			}
+
+			//fmt.Println(topicHtml)
 		}
 
 		// Construct the ExamTopic
@@ -187,14 +194,22 @@ func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages
 				Content: problem,
 			},
 		}}
-	}
-
-	//填空题
-	if examTopic.Type == "填空" {
+	} else if examTopic.Type == "填空" { //填空题
 		return AIChatMessages{Messages: []Message{
 			{
 				Role:    "user",
 				Content: `其中，“（answer_数字）”相关字样的地方是你需要填写答案的地方，现在你只需要回复我对应每个填空项的答案即可，并且采用json格式的回复方式，比如{"answer_1":"答案","answer_2":"答案"}，其中“answer_数字”字样与对应填空项中的答案对应，其他不符合json格式的内容无需回复。你只需回复答案对应json，无需回答任何解释！！！`,
+			},
+			{
+				Role:    "user",
+				Content: problem,
+			},
+		}}
+	} else if examTopic.Type == "简答" { //简答
+		return AIChatMessages{Messages: []Message{
+			{
+				Role:    "user",
+				Content: `这是一个简答题，现在你只需要回复我对应简答题答案即可，采用json格式的回复方式，比如{"answer":"答案"}，其他不符合json格式的内容无需回复。你只需回复答案对应json，无需回答任何解释！！！`,
 			},
 			{
 				Role:    "user",

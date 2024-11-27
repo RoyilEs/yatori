@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/thedevsaddam/gojsonq"
 	"io"
 	"io/ioutil"
 	"log"
@@ -655,8 +656,10 @@ func StartExam(userCache YingHuaUserCache, courseId, nodeId, examId string, retr
 }
 
 // GetExamTopicApi 获取所有考试题目，但是HTML，建议配合TurnExamTopic函数使用将题目html转成结构体
-func GetExamTopicApi(UserCache YingHuaUserCache, nodeId, examId string) (string, error) {
-
+func GetExamTopicApi(UserCache YingHuaUserCache, nodeId, examId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	// Creating a custom HTTP client with timeout and SSL context (skip SSL setup for simplicity)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // 跳过证书验证
@@ -686,24 +689,29 @@ func GetExamTopicApi(UserCache YingHuaUserCache, nodeId, examId string) (string,
 	// Perform the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return GetExamTopicApi(UserCache, nodeId, examId, retryNum-1, err)
 	}
 	defer resp.Body.Close()
 
 	// Read the response body
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return GetExamTopicApi(UserCache, nodeId, examId, retryNum-1, err)
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return GetExamTopicApi(UserCache, nodeId, examId)
+		return GetExamTopicApi(UserCache, nodeId, examId, retryNum, err)
 	}
 	return string(bodyBytes), nil
 }
 
 // SubmitExamApi 提交考试答案接口
-func SubmitExamApi(UserCache YingHuaUserCache, examId, answerId, answer, finish string) (string, error) {
+func SubmitExamApi(UserCache YingHuaUserCache, examId, answerId, answer, finish string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	// Creating the HTTP client with a timeout (30 seconds)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // 跳过证书验证
@@ -741,7 +749,8 @@ func SubmitExamApi(UserCache YingHuaUserCache, examId, answerId, answer, finish 
 	// Create the request with the necessary headers
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/exam/submit.json", UserCache.PreUrl), body)
 	if err != nil {
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return SubmitExamApi(UserCache, examId, answerId, answer, finish, retryNum-1, err)
 	}
 
 	// Set the headers
@@ -754,7 +763,8 @@ func SubmitExamApi(UserCache YingHuaUserCache, examId, answerId, answer, finish 
 	// Perform the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return SubmitExamApi(UserCache, examId, answerId, answer, finish, retryNum-1, err)
 	}
 	defer resp.Body.Close()
 
@@ -766,14 +776,16 @@ func SubmitExamApi(UserCache YingHuaUserCache, examId, answerId, answer, finish 
 
 	if strings.Contains(string(bodyStr), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return SubmitExamApi(UserCache, examId, answerId, answer, finish)
+		return SubmitExamApi(UserCache, examId, answerId, answer, finish, retryNum, err)
 	}
 	return string(bodyStr), nil
 }
 
 // WorkDetailApi 获取作业信息
-func WorkDetailApi(userCache YingHuaUserCache, nodeId string) string {
-
+func WorkDetailApi(userCache YingHuaUserCache, nodeId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	url := userCache.PreUrl + "/api/node/work.json?nodeId=" + nodeId
 	method := "POST"
 
@@ -787,7 +799,7 @@ func WorkDetailApi(userCache YingHuaUserCache, nodeId string) string {
 	err := writer.Close()
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", err
 	}
 
 	tr := &http.Transport{
@@ -802,33 +814,36 @@ func WorkDetailApi(userCache YingHuaUserCache, nodeId string) string {
 
 	if err != nil {
 		fmt.Println(err)
-		return ""
+		return "", err
 	}
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:88.0) Gecko/20100101 Firefox/88.0")
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return ""
+		time.Sleep(100 * time.Millisecond)
+		return WorkDetailApi(userCache, nodeId, retryNum-1, err)
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
-		return ""
+		time.Sleep(100 * time.Millisecond)
+		return WorkDetailApi(userCache, nodeId, retryNum-1, err)
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return WorkDetailApi(userCache, nodeId)
+		return WorkDetailApi(userCache, nodeId, retryNum, err)
 	}
-	return string(body)
+	return string(body), nil
 }
 
 // StartWork 开始做作业接口
 // {"_code":9,"status":false,"msg":"您已完成作业，该作业仅可答题1次","result":{}}
-func StartWork(userCache YingHuaUserCache, courseId, nodeId, workId string) (string, error) {
+func StartWork(userCache YingHuaUserCache, courseId, nodeId, workId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	url := userCache.PreUrl + "/api/work/start.json?nodeId=" + nodeId + "&courseId=" + courseId + "&token=" + userCache.token + "&workId=" + workId
 	method := "GET"
 
@@ -851,8 +866,8 @@ func StartWork(userCache YingHuaUserCache, courseId, nodeId, workId string) (str
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return "", nil
+		time.Sleep(100 * time.Millisecond)
+		return StartWork(userCache, courseId, nodeId, workId, retryNum-1, err)
 	}
 	defer res.Body.Close()
 
@@ -863,14 +878,16 @@ func StartWork(userCache YingHuaUserCache, courseId, nodeId, workId string) (str
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return StartWork(userCache, courseId, nodeId, workId)
+		return StartWork(userCache, courseId, nodeId, workId, retryNum, err)
 	}
 	return string(body), nil
 }
 
 // GetWorkApi 获取所有作业题目
-func GetWorkApi(UserCache YingHuaUserCache, nodeId, workId string) (string, error) {
-
+func GetWorkApi(UserCache YingHuaUserCache, nodeId, workId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	url := UserCache.PreUrl + "/api/work.json?nodeId=" + nodeId + "&workId=" + workId + "&token=" + UserCache.token
 	method := "POST"
 
@@ -902,8 +919,8 @@ func GetWorkApi(UserCache YingHuaUserCache, nodeId, workId string) (string, erro
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return "", nil
+		time.Sleep(100 * time.Millisecond)
+		return GetWorkApi(UserCache, nodeId, workId, retryNum-1, err)
 	}
 	defer res.Body.Close()
 
@@ -914,15 +931,17 @@ func GetWorkApi(UserCache YingHuaUserCache, nodeId, workId string) (string, erro
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return GetWorkApi(UserCache, nodeId, workId)
+		return GetWorkApi(UserCache, nodeId, workId, retryNum, err)
 	}
 
 	return string(body), nil
 }
 
 // SubmitWorkApi 提交作业答案接口
-func SubmitWorkApi(UserCache YingHuaUserCache, workId, answerId, answer, finish string /*finish代表是否是最后提交并且结束考试，0代表不是，1代表是*/) (string, error) {
-
+func SubmitWorkApi(UserCache YingHuaUserCache, workId, answerId, answer, finish string /*finish代表是否是最后提交并且结束考试，0代表不是，1代表是*/, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // 跳过证书验证
 	}
@@ -945,10 +964,11 @@ func SubmitWorkApi(UserCache YingHuaUserCache, workId, answerId, answer, finish 
 	writer.WriteField("finish", finish)
 	writer.WriteField("token", UserCache.token)
 
-	// Add the answer(s)
-	if len(answer) == 1 {
+	if len(answer) == 1 { //如果单选题
 		writer.WriteField("answer", string(answer[0]))
-	} else {
+	} else if gojsonq.New().JSONString(answer).Find("answer") != nil { //如果是简答题
+		writer.WriteField("answer", gojsonq.New().JSONString(answer).Find("answer").(string))
+	} else { //如果多选题或者填空题
 		for i := 0; i < len(answer); i++ {
 			writer.WriteField("answer[]", string(answer[i]))
 		}
@@ -974,21 +994,25 @@ func SubmitWorkApi(UserCache YingHuaUserCache, workId, answerId, answer, finish 
 	// Perform the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return SubmitWorkApi(UserCache, workId, answerId, answer, finish, retryNum-1, err)
 	}
 	defer resp.Body.Close()
 	// Optionally, read the response body
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	if strings.Contains(string(bodyBytes), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return SubmitWorkApi(UserCache, workId, answer, answer, finish)
+		return SubmitWorkApi(UserCache, workId, answer, answer, finish, retryNum, err)
 	}
 	return string(bodyBytes), nil
 }
 
 // WorkedDetail 获取最后作业得分接口
 // {"_code":9,"status":false,"msg":"您已完成作业，该作业仅可答题1次","result":{}}
-func WorkedFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId string) (string, error) {
+func WorkedFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	url := userCache.PreUrl + "/api/work.json?nodeId=" + nodeId + "&workId=" + workId + "&token=" + userCache.token
 	method := "GET"
 
@@ -1012,8 +1036,8 @@ func WorkedFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return WorkedFinallyDetailApi(userCache, courseId, nodeId, workId, retryNum-1, err)
 	}
 	defer res.Body.Close()
 
@@ -1024,14 +1048,17 @@ func WorkedFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return WorkedFinallyDetailApi(userCache, courseId, nodeId, workId)
+		return WorkedFinallyDetailApi(userCache, courseId, nodeId, workId, retryNum, err)
 	}
 	return string(body), nil
 }
 
 // WorkedDetail 获取最后作业得分接口
 // {"_code":9,"status":false,"msg":"您已完成作业，该作业仅可答题1次","result":{}}
-func ExamFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId string) (string, error) {
+func ExamFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId string, retryNum int, lastError error) (string, error) {
+	if retryNum < 0 {
+		return "", lastError
+	}
 	url := userCache.PreUrl + "/api/exam.json?nodeId=" + nodeId + "&examId=" + workId + "&token=" + userCache.token
 	method := "GET"
 
@@ -1055,8 +1082,8 @@ func ExamFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId s
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return "", err
+		time.Sleep(100 * time.Millisecond)
+		return ExamFinallyDetailApi(userCache, courseId, nodeId, workId, retryNum-1, err)
 	}
 	defer res.Body.Close()
 
@@ -1067,7 +1094,7 @@ func ExamFinallyDetailApi(userCache YingHuaUserCache, courseId, nodeId, workId s
 	}
 	if strings.Contains(string(body), "502 Bad Gateway") {
 		time.Sleep(time.Millisecond * 150) //延迟
-		return ExamFinallyDetailApi(userCache, courseId, nodeId, workId)
+		return ExamFinallyDetailApi(userCache, courseId, nodeId, workId, retryNum, err)
 	}
 	return string(body), nil
 }
