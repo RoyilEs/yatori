@@ -17,7 +17,7 @@ func TestENAEALogin(t *testing.T) {
 	setup()
 	users := global.Config.Users[3]
 	cache := enaeaApi.EnaeaUserCache{Account: users.Account, Password: users.Password}
-	err := enaea.EnaeaLoginAction(&cache)
+	_, err := enaea.EnaeaLoginAction(&cache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -30,7 +30,7 @@ func TestENAEAPullProject(t *testing.T) {
 	setup()
 	users := global.Config.Users[3]
 	cache := enaeaApi.EnaeaUserCache{Account: users.Account, Password: users.Password}
-	err := enaea.EnaeaLoginAction(&cache)
+	_, err := enaea.EnaeaLoginAction(&cache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +48,7 @@ func TestENAEAPullProjectForCourse(t *testing.T) {
 	setup()
 	users := global.Config.Users[3]
 	cache := enaeaApi.EnaeaUserCache{Account: users.Account, Password: users.Password}
-	err := enaea.EnaeaLoginAction(&cache)
+	_, err := enaea.EnaeaLoginAction(&cache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,7 +66,7 @@ func TestENAEAPullProjectForVideo(t *testing.T) {
 	setup()
 	users := global.Config.Users[3]
 	cache := enaeaApi.EnaeaUserCache{Account: users.Account, Password: users.Password}
-	err := enaea.EnaeaLoginAction(&cache)
+	_, err := enaea.EnaeaLoginAction(&cache)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,7 +76,7 @@ func TestENAEAPullProjectForVideo(t *testing.T) {
 	}
 	courseList, err := enaea.CourseListAction(&cache, action[0].CircleId)
 	for _, v := range courseList {
-		videoList, err := enaea.VideoListAction(&cache, v.CircleId, v.CourseId)
+		videoList, err := enaea.VideoListAction(&cache, &v)
 		if err != nil {
 			t.Error(err)
 		}
