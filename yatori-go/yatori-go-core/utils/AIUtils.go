@@ -151,8 +151,7 @@ func TongYiChatReplyApi(
 
 	choices, ok := responseMap["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
-		log.Printf("unexpected response structure: %v", responseMap)
-		return "", fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("AI回复内容未找到，AI返回信息：" + string(body))
 	}
 
 	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
@@ -226,8 +225,7 @@ func ChatGLMChatReplyApi(
 
 	choices, ok := responseMap["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
-		log.Printf("unexpected response structure: %v", responseMap)
-		return "", fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("AI回复内容未找到，AI返回信息：" + string(body))
 	}
 
 	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
@@ -309,7 +307,7 @@ func XingHuoChatReplyApi(model,
 			return XingHuoChatReplyApi(model, apiKey, aiChatMessages, retryNum-1, err)
 		}
 		log.Printf("unexpected response structure: %v", responseMap)
-		return "", fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("AI回复内容未找到，AI返回信息：" + string(body))
 	}
 
 	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
@@ -381,7 +379,7 @@ func DouBaoChatReplyApi(model,
 	choices, ok := responseMap["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
 		log.Printf("unexpected response structure: %v", responseMap)
-		return "", fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("AI回复内容未找到，AI返回信息：" + string(body))
 	}
 
 	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
@@ -450,8 +448,7 @@ func OtherChatReplyApi(url,
 
 	choices, ok := responseMap["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
-		log.Printf("unexpected response structure: %v", responseMap)
-		return "", fmt.Errorf("no choices in response")
+		return "", fmt.Errorf("AI回复内容未找到，AI返回信息：" + string(body))
 	}
 
 	message, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})
