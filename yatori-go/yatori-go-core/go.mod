@@ -21,6 +21,7 @@ require (
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/thedevsaddam/gojsonq v1.9.1 // indirect
+	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/yalue/onnxruntime_go v1.12.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
