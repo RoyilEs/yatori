@@ -1,24 +1,26 @@
-package utils
+package yinghua
 
 import (
 	"fmt"
 	"regexp"
 	"strings"
+	"yatori-go-core/utils"
 )
 
 // ExamTopics holds a map of ExamTopic indexed by answerId
-type ExamTopics struct {
-	ExamTopics map[string]ExamTopic
+type YingHuaExamTopics struct {
+	YingHuaExamTopics map[string]YingHuaExamTopic
 }
 
 // ExamTopic represents a single exam question
-type ExamTopic struct {
+type YingHuaExamTopic struct {
 	AnswerId string        `json:"answerId"`
 	Index    string        `json:"index"`
 	Source   string        `json:"source"`
 	Content  string        `json:"content"`
 	Type     string        `json:"type"`
 	Selects  []TopicSelect `json:"selects"`
+	Answers  string        `json:"answers"`
 }
 
 // TopicSelect represents a possible answer choice
@@ -29,9 +31,9 @@ type TopicSelect struct {
 }
 
 // 题目转换
-func TurnExamTopic(examHtml string) ExamTopics {
-	exchangeTopics := ExamTopics{
-		ExamTopics: make(map[string]ExamTopic),
+func TurnExamTopic(examHtml string) YingHuaExamTopics {
+	exchangeTopics := YingHuaExamTopics{
+		YingHuaExamTopics: make(map[string]YingHuaExamTopic),
 	}
 
 	// Regular expression to extract the topic index and answerId
@@ -157,7 +159,7 @@ func TurnExamTopic(examHtml string) ExamTopics {
 		}
 
 		// Construct the ExamTopic
-		examTopic := ExamTopic{
+		examTopic := YingHuaExamTopic{
 			AnswerId: topicMap[num],
 			Index:    num,
 			Source:   source,
@@ -167,14 +169,14 @@ func TurnExamTopic(examHtml string) ExamTopics {
 		}
 
 		// Add the topic to the ExamTopics map
-		exchangeTopics.ExamTopics[topicMap[num]] = examTopic
+		exchangeTopics.YingHuaExamTopics[topicMap[num]] = examTopic
 	}
 
 	return exchangeTopics
 }
 
 // 组装AI问题消息
-func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages {
+func AIProblemMessage(testPaperTitle string, examTopic YingHuaExamTopic) utils.AIChatMessages {
 	problem := `试卷名称：` + testPaperTitle + `
 题目类型：` + examTopic.Type + `
 题目内容：` + examTopic.Content + "\n"
@@ -184,7 +186,7 @@ func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages
 		for _, v := range examTopic.Selects {
 			problem += v.Num + v.Text + "\n"
 		}
-		return AIChatMessages{Messages: []Message{
+		return utils.AIChatMessages{Messages: []utils.Message{
 			{
 				Role:    "user",
 				Content: "接下来你只需要回答选项字母，不能回答任何选项字母无关的任何内容，包括解释以及标点符也不需要。就算你不知道选什么也随机选输出其选项字母。",
@@ -195,7 +197,7 @@ func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages
 			},
 		}}
 	} else if examTopic.Type == "填空" { //填空题
-		return AIChatMessages{Messages: []Message{
+		return utils.AIChatMessages{Messages: []utils.Message{
 			{
 				Role:    "user",
 				Content: `其中，“（answer_数字）”相关字样的地方是你需要填写答案的地方，现在你只需要回复我对应每个填空项的答案即可，并且采用json格式的回复方式，比如{"answer_1":"答案","answer_2":"答案"}，其中“answer_数字”字样与对应填空项中的答案对应，其他不符合json格式的内容无需回复。你只需回复答案对应json，无需回答任何解释！！！`,
@@ -206,7 +208,7 @@ func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages
 			},
 		}}
 	} else if examTopic.Type == "简答" { //简答
-		return AIChatMessages{Messages: []Message{
+		return utils.AIChatMessages{Messages: []utils.Message{
 			{
 				Role:    "user",
 				Content: `这是一个简答题，现在你只需要回复我对应简答题答案即可，采用json格式的回复方式，比如{"answer":"答案"}，其他不符合json格式的内容无需回复。你只需回复答案对应json，无需回答任何解释！！！`,
@@ -217,5 +219,5 @@ func AIProblemMessage(testPaperTitle string, examTopic ExamTopic) AIChatMessages
 			},
 		}}
 	}
-	return AIChatMessages{Messages: []Message{}}
+	return utils.AIChatMessages{Messages: []utils.Message{}}
 }

@@ -11,7 +11,7 @@ import (
 import "fmt"
 
 // 验证码识别
-func AutoVerification(img image.Image) string {
+func AutoVerification(img image.Image, outputShape ort.Shape) string {
 	img1 := ResizeImage(img, uint(64*img.Bounds().Dx()/img.Bounds().Dy()), 64)
 	imgGray := ConvertToGray(img1)
 
@@ -25,7 +25,6 @@ func AutoVerification(img image.Image) string {
 
 	defer inputTensor.Destroy()
 	// This hypothetical network maps a 2x5 input -> 2x3x4 output.
-	outputShape := ort.NewShape(1, 18)
 	outputTensor, err := ort.NewEmptyTensor[int64](outputShape)
 	defer outputTensor.Destroy()
 

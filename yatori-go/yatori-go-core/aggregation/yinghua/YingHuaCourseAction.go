@@ -281,7 +281,7 @@ func ExamDetailAction(UserCache *yinghuaApi.YingHuaUserCache, nodeId string) ([]
 }
 
 // randomAnswer 如果AI出问题那么直接随机返回答案
-func randomAnswer(topic utils.ExamTopic) string {
+func randomAnswer(topic yinghuaApi.YingHuaExamTopic) string {
 	if topic.Type == "单选" {
 		sct := rand.Intn(len(topic.Selects))
 		return "[" + topic.Selects[sct].Value + "]"
@@ -321,14 +321,14 @@ func StartExamAction(
 		return errors.New(gojsonq.New().JSONString(startExam).Find("msg").(string))
 	}
 	//html转结构体
-	topic := utils.TurnExamTopic(api)
+	topic := yinghuaApi.TurnExamTopic(api)
 	//fmt.Println(topic)
 	//遍历题目map,并回答问题
 	var lastAnswer string
 	var lastProblem string
-	for k, v := range topic.ExamTopics {
+	for k, v := range topic.YingHuaExamTopics {
 		//构建统一AI消息
-		aiMessage := utils.AIProblemMessage(exam.Title, v)
+		aiMessage := yinghuaApi.AIProblemMessage(exam.Title, v)
 		aiAnswer, err := utils.AggregationAIApi(url, model, aiType, aiMessage, apiKey)
 		if err != nil {
 			log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, "Ai异常，返回信息：", err.Error())
@@ -428,14 +428,14 @@ func StartWorkAction(userCache *yinghuaApi.YingHuaUserCache,
 		return errors.New(gojsonq.New().JSONString(startWork).Find("msg").(string))
 	}
 	//html转结构体
-	topic := utils.TurnExamTopic(api)
+	topic := yinghuaApi.TurnExamTopic(api)
 	//fmt.Println(topic)
 	//遍历题目map,并回答问题
 	var lastAnswer string
 	var lastProblem string
-	for k, v := range topic.ExamTopics {
+	for k, v := range topic.YingHuaExamTopics {
 		//构建统一AI消息
-		aiMessage := utils.AIProblemMessage(work.Title, v)
+		aiMessage := yinghuaApi.AIProblemMessage(work.Title, v)
 		aiAnswer, err := utils.AggregationAIApi(url, model, aiType, aiMessage, apiKey)
 		if err != nil {
 			log.Print(log.INFO, `[`, userCache.Account, `] `, log.BoldRed, "Ai异常，返回信息：", err.Error())
