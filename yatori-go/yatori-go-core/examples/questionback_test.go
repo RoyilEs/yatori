@@ -17,7 +17,7 @@ func TestQuestionBackInsert(t *testing.T) {
 	question := questionback.Question{
 		Type:    "填空题",
 		Content: "这是一个示例题目",
-		Answer:  `{"答案1", "答案2"}`,
+		Answers: `{"答案1", "答案2"}`,
 	}
 	content := question.QuestionBackSelectsForTypeAndContent(init)
 
@@ -37,7 +37,7 @@ func TestQuestionBack(t *testing.T) {
 	question := questionback.Question{
 		Type:    "填空题",
 		Content: "这是一个示例题目",
-		Answer:  `{"答案1", "答案2"}`,
+		Answers: `{"答案1", "答案2"}`,
 	}
 	content := question.QuestionBackSelectsForTypeAndContent(db)
 	if len(content) == 0 { //如果没有题目则触发缓存逻辑
@@ -61,5 +61,5 @@ func YingHuaTopicTurnQuestion(topic yinghua.YingHuaExamTopic) questionback.Quest
 
 // Question转英华
 func QuestionTurnYingHuaTopic(qu questionback.Question) yinghua.YingHuaExamTopic {
-	yinghua.YingHuaExamTopic{}
+	return yinghua.YingHuaExamTopic{}
 }
