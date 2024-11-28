@@ -181,7 +181,7 @@ func SubmitStudyTimeAction(cache *enaea.EnaeaUserCache, video *EnaeaVideo, time 
 	if gojsonq.New().JSONString(api).Find("success") == false {
 		return errors.New(gojsonq.New().JSONString(api).Find("message").(string))
 	}
-	if gojsonq.New().JSONString(api).Find("progress") != nil {
+	if gojsonq.New().JSONString(api).Find("progress") == nil {
 		return errors.New("提交学时时服务器端返回消息异常：" + api)
 	}
 	video.StudyProgress = float32(gojsonq.New().JSONString(api).Find("progress").(float64))
